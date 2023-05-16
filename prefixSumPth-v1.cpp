@@ -51,16 +51,20 @@ TYPE *InputVector, *OutputVector;
 
 chronometer_t parallelPrefixSumTime;
 
-volatile TYPE partialSum[MAX_THREADS];
+volatile TYPE partialSum[MAX_THREADS] = {};
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
+
+typedef struct {
+    long start, end;
+    int threadId;
+} thread_args_t;
 
 void
 verifyPrefixSum(const TYPE *InputVec, const TYPE *OutputVec, long nTotalElmts)
 {
     volatile TYPE last = InputVec[0];
-    bool ok = 1;
-    for (long i = 1; i < nTotalElmts; i++) {
+    for (long i = 1; i < nTotalElmts; ++i) {
         if (OutputVec[i] != (InputVec[i] + last)) {
             fprintf(stderr,
                     "In[%ld]= %ld\n"
@@ -69,31 +73,76 @@ verifyPrefixSum(const TYPE *InputVec, const TYPE *OutputVec, long nTotalElmts)
                     "last=%ld\n",
                     i, InputVec[i], i, OutputVec[i], i - 1, OutputVec[i - 1],
                     last);
-            ok = 0;
-            break;
+            printf("\nPrefix Sum DID NOT compute correctly!!!\n");
+            return;
         }
         last = OutputVec[i];
     }
-    printf(ok ? "\nPrefix Sum verified correctly.\n"
-              : "\nPrefix Sum DID NOT compute correctly!!!\n");
+    printf("\nPrefix Sum verified correctly.\n");
+}
+
+void *
+threadPrefixSum(void *arg)
+{
+    thread_args_t *args = (thread_args_t *)arg;
+
+    // Calculate partial sum for the block assigned to this thread
+    TYPE sum = 0;
+    for (long i = args->start; i < args->end; ++i) {
+        sum += InputVector[i];
+        OutputVector[i] = sum;
+    }
+
+    partialSum[args->threadId] = sum; // Store the partial sum for this thread
+
+    pthread_exit(NULL);
 }
 
 void
-ParallelPrefixSumPth(const TYPE *InputVec,
-                     const TYPE *OutputVec,
+ParallelPrefixSumPth(TYPE *InputVec,
+                     TYPE *OutputVec,
                      long nTotalElmts,
                      int nThreads)
 {
-    pthread_t Thread[MAX_THREADS];
-    int my_thread_id[MAX_THREADS];
+    thread_args_t threadArgs[MAX_THREADS];
+    pthread_t threads[MAX_THREADS];
 
-    ///////////////// INCLUIR AQUI SEU CODIGO da V1 /////////
+    const long blockSize = min(nTotalElements / nThreads, nTotalElements);
 
-    // criar o POOL de threads aqui!
+    // Create the thread pool
+    for (int i = 0; i < nThreads - 1; ++i) {
+        threadArgs[i] = (thread_args_t){
+            .start = i * blockSize,
+            .end = (i * blockSize) + blockSize,
+            .threadId = i,
+        };
+        pthread_create(&threads[i], NULL, threadPrefixSum, &threadArgs[i]);
+    }
+    threadArgs[nThreads - 1] = (thread_args_t){
+        .start = (nThreads - 1) * blockSize,
+        .end = nTotalElements,
+        .threadId = nThreads - 1,
+    };
+    pthread_create(&threads[nThreads - 1], NULL, threadPrefixSum,
+                   &threadArgs[nThreads - 1]);
 
-    // voce pode criar outras funcoes para as suas threads
+    // Wait for all threads to finish
+    for (int i = 0; i < nThreads; ++i) {
+        pthread_join(threads[i], NULL);
+    }
 
-    //////////////////////////////////////////////////////////
+    // Perform the prefix sum on partial sums computed by each thread
+    for (int i = 1; i < nThreads; ++i) {
+        partialSum[i] += partialSum[i - 1];
+    }
+
+    // Adjust the output vector using the prefix sums
+    for (int i = 1; i < nThreads; ++i) {
+        const long start = threadArgs[i].start, end = threadArgs[i].end;
+        for (long j = start; j < end; ++j) {
+            OutputVector[j] += partialSum[i - 1];
+        }
+    }
 }
 
 int
