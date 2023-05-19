@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include <typeinfo>
+#include <vector>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,11 +54,10 @@ chronometer_t parallelPrefixSumTime;
 
 volatile TYPE partialSum[MAX_THREADS] = {};
 
-#define min(a, b) (((a) < (b)) ? (a) : (b))
-
 typedef struct {
     long start, end;
     int threadId;
+    pthread_barrier_t *barrier; // Barrier synchronization point
 } thread_args_t;
 
 void
@@ -84,16 +84,24 @@ verifyPrefixSum(const TYPE *InputVec, const TYPE *OutputVec, long nTotalElmts)
 void *
 threadPrefixSum(void *arg)
 {
-    thread_args_t *args = (thread_args_t *)arg;
+    thread_args_t *args = static_cast<thread_args_t *>(arg);
+    TYPE sum = 0;
 
     // Calculate partial sum for the block assigned to this thread
-    TYPE sum = 0;
-    for (long i = args->start; i < args->end; ++i) {
+    for (long i = args->start; i < args->end; ++i)
         sum += InputVector[i];
-        OutputVector[i] = sum;
-    }
 
-    partialSum[args->threadId] = sum; // Store the partial sum for this thread
+    // Store the partial sum for this thread
+    partialSum[args->threadId] = sum;
+    pthread_barrier_wait(args->barrier);
+
+    TYPE prefixSum = 0;
+    for (long i = args->threadId - 1; i >= 0; --i)
+        prefixSum += partialSum[i];
+    for (long i = args->start; i < args->end; ++i) {
+        OutputVector[i] = prefixSum + InputVector[i];
+        prefixSum += InputVector[i];
+    }
 
     pthread_exit(NULL);
 }
@@ -104,45 +112,37 @@ ParallelPrefixSumPth(TYPE *InputVec,
                      long nTotalElmts,
                      int nThreads)
 {
-    thread_args_t threadArgs[MAX_THREADS];
     pthread_t threads[MAX_THREADS];
+    thread_args_t args[nThreads];
+    pthread_barrier_t barrier; // Barrier synchronization point
 
-    const long blockSize = min(nTotalElements / nThreads, nTotalElements);
+    // Elements per thread
+    const long elementsPerThread = nTotalElmts / nThreads;
+    long remainingElements = nTotalElmts % nThreads;
+
+    // Initialize the barrier with the number of threads
+    pthread_barrier_init(&barrier, NULL, nThreads);
 
     // Create the thread pool
-    for (int i = 0; i < nThreads - 1; ++i) {
-        threadArgs[i] = (thread_args_t){
-            .start = i * blockSize,
-            .end = (i * blockSize) + blockSize,
+    long start = 0;
+    for (int i = 0; i < nThreads; ++i) {
+        args[i] = (thread_args_t){
+            .start = start,
             .threadId = i,
+            .barrier = &barrier,
         };
-        pthread_create(&threads[i], NULL, threadPrefixSum, &threadArgs[i]);
+        start += elementsPerThread;
+        args[i].end =
+            (remainingElements > 0) ? (--remainingElements, ++start) : start;
+
+        pthread_create(&threads[i], NULL, threadPrefixSum, &args[i]);
     }
-    threadArgs[nThreads - 1] = (thread_args_t){
-        .start = (nThreads - 1) * blockSize,
-        .end = nTotalElements,
-        .threadId = nThreads - 1,
-    };
-    pthread_create(&threads[nThreads - 1], NULL, threadPrefixSum,
-                   &threadArgs[nThreads - 1]);
 
     // Wait for all threads to finish
-    for (int i = 0; i < nThreads; ++i) {
+    for (int i = 0; i < nThreads; ++i)
         pthread_join(threads[i], NULL);
-    }
 
-    // Perform the prefix sum on partial sums computed by each thread
-    for (int i = 1; i < nThreads; ++i) {
-        partialSum[i] += partialSum[i - 1];
-    }
-
-    // Adjust the output vector using the prefix sums
-    for (int i = 1; i < nThreads; ++i) {
-        const long start = threadArgs[i].start, end = threadArgs[i].end;
-        for (long j = start; j < end; ++j) {
-            OutputVector[j] += partialSum[i - 1];
-        }
-    }
+    pthread_barrier_destroy(&barrier);
 }
 
 int
@@ -237,7 +237,8 @@ main(int argc, char *argv[])
 
 ////////////////////////////
 // call it N times
-#define NTIMES 1000
+// TODO: voltar para 1000
+#define NTIMES 1
     TYPE globalSum;
     TYPE *InVec = InputVector;
     for (int i = 0; i < NTIMES; i++) {
