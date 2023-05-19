@@ -19,7 +19,7 @@ b) na fase ANTES da barreira:
       cada célula irá produzir sua soma parcial ANTES da barreira)
 
 c) APÓS BARREIRA:
-   - Como o vetor de somasParciais só possui uma célula por thread
+   - Como o vetor de partialSum só possui uma célula por thread
      fica fácil (e muito rápido, pois são poucas posições) cada thread
      fazer um "for" no vetor calculando o valor do seu prefixo na
      sua variável local myPrefixSum.
