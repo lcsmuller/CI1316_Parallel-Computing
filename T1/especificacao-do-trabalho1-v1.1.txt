@@ -2,13 +2,14 @@ ci1316/ci316  - PROGRAMAÇÃO PARALELA -
 1o semestre de 2023    
 por W.Zola/UFPR
 
-Lab 1: SomaDePrefixos-com-PThreads   (versão 1)  
+Lab 1: SomaDePrefixos-com-PThreads   (versão 1.1)  
 ----------------------------------
 Histórico:
 - v1.0 a versão inicial
+- v1.1 trocamos para 5milhoes de elementos
   
 Data do enunciado: 10/maio/2023
-Data da entrega Lab1: .../maio/2023 (será aproximadamente 1semana e meia!)
+Data da entrega Lab1: 22/maio/2023 (será aproximadamente 2semanas aprox.!)
 
 
 ------- PASSOS PARA FAZER ESSE TRABALHO: -----------
@@ -17,24 +18,22 @@ O professor vai fornecer:
  - o script para rodar os experimentos
  - um Makefile exemplo do professor
  - uma planilha exemplo para voce rodar seus experimentos
-   e incluir seus dados na pagina dadosV2
+   e incluir seus dados na pagina dadosV1
    ao incluir os seus dados a planilha já tem os gráficos
    como incluir?
    * compile com comando make
-   * rode o script do professor chamado roda-v2.sh na sua máquina
+   * rode o script do professor chamado roda.sh na sua máquina
      A MÁQUINA DEVE TER NO MÍNIMO 4 CORES E 8GB DE MEMÓRIA
      (voce DEVE ter um mínimo de processos rodando para não atrapalhar suas medidas)
      assim: 
-         #rode com 20milhoes de elementos em máquina com 8GB assim
-         ./roda-v2.sh 20000000 
-         OU
-         #rode com 500mil de elementos em máquina com 8GB assim
-         ./roda-v2.sh 500000 
+         #rode com 5milhoes de elementos em máquina com 8GB assim
+         ./roda.sh 5000000 
+         
          
      esse script vai produzir a saida das experiencias para
      1 a 8 threads (10 vezes cada)
      Voce deve copiar (contol-C) a saida do script 
-       na página dadosV2 na primeira celula dessa pagina
+       na página dadosV1 na primeira celula dessa pagina
        fazer (control-V nessa célula)
        MARCANDO PARA A PLANILHA USAR COMO SEPARADORES OS CARACTERES []
 
@@ -182,4 +181,3 @@ Em princípio o tar.gz deve ser entregue via upload na ufpr virtual
 O professor deverá incluir (em breve) a opção para entrega do lab2 na ufpr virtual
 
 --------------------------------------
-

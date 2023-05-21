@@ -2,9 +2,4 @@
 *
 # But these
 !.gitignore
-!*.c
-!*.cpp
-!*.sh
-!*.txt
-!*.ods
-!Makefile
+!T1

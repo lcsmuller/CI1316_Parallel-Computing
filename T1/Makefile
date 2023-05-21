@@ -1,21 +1,20 @@
+CC = g++
 VERSION = v1
 
-OBJS = chrono.o
+SRC  = chrono.c
 MAIN = prefixSumPth-$(VERSION)
 
-CXXFLAGS ?= -O3
+CFLAGS  ?= -O3
 DBGFLAGS = -g
 LDLIBS   = -lpthread
 
-all: $(MAIN)
+all: $(SRC) $(MAIN)
 
 debug:
-	@ CXXFLAGS=$(DBGFLAGS) CFLAGS=$(DBGFLAGS) $(MAKE)
-
-$(MAIN): $(OBJS)
+	@ CFLAGS=$(DBGFLAGS) $(MAKE)
 
 clean:
-	@ rm -f $(OBJS) $(MAIN)
+	@ rm -f $(MAIN)
 
 .PHONY: clean
  

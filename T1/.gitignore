@@ -1,0 +1,14 @@
+# Ignore all
+*
+# But these
+!.gitignore
+!*.c
+!*.sh
+!*.txt
+!*.ods
+!Makefile
+!relatorio.pdf
+!cores_topology.png
+!tempo_medio.png
+!vazao_media.png
+!relatorio.md
