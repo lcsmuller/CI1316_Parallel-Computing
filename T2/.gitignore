@@ -2,4 +2,6 @@
 *
 # But these
 !.gitignore
-!T*
+!*.pdf
+!*.c
+!Makefile
