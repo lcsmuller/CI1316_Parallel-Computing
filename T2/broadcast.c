@@ -18,6 +18,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <math.h>
 
 #include "chrono.c"
 
@@ -48,20 +49,28 @@ const int SEED = 100;
 #define PHYSIC_RANK( logic_rank, root, comm_size ) \
         (( logic_rank + root ) % comm_size)        
 
+
 void my_Bcast_rb(void* buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm) {
     int rank, size;
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
+    int end = log2(nproc) - 1;
+
     if (rank == root) {
         // Send data to all other processes
-        for (int i = 0; i < root; ++i)
-			MPI_Send(buffer, count, datatype, i, 0, comm);
-        for (int i = root + 1; i < size; ++i)
-			MPI_Send(buffer, count, datatype, i, 0, comm);
-    } else {
-        // Receive data from the root process
+        for (int i = rank; i <= end; i++){
+			MPI_Send(buffer, count, datatype, rank + (2 << i), 0, comm);
+        }
+    } 
+    else {
         MPI_Recv(buffer, count, datatype, root, 0, comm, MPI_STATUS_IGNORE);
+
+        int first = ceil((rank - 1)/2);
+        // Receive data from the root process
+        for (int i = first; i <= end; ++i){
+            MPI_Send(buffer, count, datatype, rank + (2 << i), 0, comm);
+        }
     }
 }
 
