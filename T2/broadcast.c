@@ -18,6 +18,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <math.h>
 
 #include "chrono.c"
 
@@ -41,7 +42,6 @@ chronometer_t myBroadcastChrono;
 
 const int SEED = 100;
 
-
 // MACROS para AJUDAR!
 #define LOGIC_RANK( my_rank, root, comm_size ) \
         (( my_rank + comm_size - root ) % comm_size)
@@ -53,16 +53,25 @@ void my_Bcast_rb(void* buffer, int count, MPI_Datatype datatype, int root, MPI_C
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
-    if (rank == root) {
-        // Send data to all other processes
-        for (int i = 0; i < root; ++i)
-			MPI_Send(buffer, count, datatype, i, 0, comm);
-        for (int i = root + 1; i < size; ++i)
-			MPI_Send(buffer, count, datatype, i, 0, comm);
-    } else {
-        // Receive data from the root process
-        MPI_Recv(buffer, count, datatype, root, 0, comm, MPI_STATUS_IGNORE);
+    const int end = log2(size) - 1;
+	const char *name = "root";
+	int first = rank;
+
+    if (rank != root) {
+        first = ceil(((double)(rank - 1))/2) + 1;
+		name = "node";
+        MPI_Recv(buffer, count, datatype, MPI_ANY_SOURCE, 0, comm, MPI_STATUS_IGNORE);
     }
+
+	for (int i = first; i <= end; ++i){
+		const int dest = rank + pow(2, i);
+		if (dest >= size) {
+			fprintf(stderr, "Não envia (dest %d)\n", dest);
+			break;
+		}
+		// fprintf(stderr, "(%s) rank: %d\tdest: %d\ti: %d\tsize: %d\n", name, rank, dest, i, size);
+		MPI_Send(buffer, count, datatype, dest, 0, comm);
+	}
 }
 
 // OBS1: sua função my_Bcast_rb
