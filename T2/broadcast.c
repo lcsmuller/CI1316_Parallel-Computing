@@ -49,29 +49,34 @@ const int SEED = 100;
         (( logic_rank + root ) % comm_size)        
 
 
-void my_Bcast_rb(void* buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm) {
-    int rank, size;
-    MPI_Comm_rank(comm, &rank);
-    MPI_Comm_size(comm, &size);
 
-    const int end = log2(size) - 1;
+void my_Bcast_rb(void* buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm) {
+    int rank, nNodos;
+    MPI_Comm_rank(comm, &rank);
+    MPI_Comm_size(comm, &nNodos);
+
+    const int end = ceil(log2(nNodos));
 	const char *name = "root";
-	int first = rank;
 
     if (rank != root) {
-        first = ceil(((double)(rank - 1))/2) + 1;
 		name = "node";
         MPI_Recv(buffer, count, datatype, MPI_ANY_SOURCE, 0, comm, MPI_STATUS_IGNORE);
     }
 
-	for (int i = first; i <= end; ++i){
-		const int dest = rank + pow(2, i);
-		if (dest >= size) {
-			fprintf(stderr, "Não envia (dest %d)\n", dest);
-			break;
+	for (int fase = 0; fase < end; fase++){
+		int np = pow(2, fase); 
+
+		const int dest = rank + pow(2, fase);
+		
+		if ( rank < np && (rank + np) < nNodos ){
+			fprintf(stderr, "(%s) rank: %d\tdest: %d\tfase: %d\tnNodos: %d\n", name, rank, dest, fase+1, nNodos);
+			MPI_Send(buffer, count, datatype, dest, 0, comm);
 		}
-		// fprintf(stderr, "(%s) rank: %d\tdest: %d\ti: %d\tsize: %d\n", name, rank, dest, i, size);
-		MPI_Send(buffer, count, datatype, dest, 0, comm);
+		
+		// if (dest >= nNodos) {
+		// 	fprintf(stderr, "Não envia (dest %d)\n", dest);
+		// 	break;
+		// }
 	}
 }
 
