@@ -47,43 +47,73 @@ const int SEED = 100;
     ((my_rank + comm_size - root) % comm_size)
 #define PHYSIC_RANK(logic_rank, root, comm_size)                              \
     ((logic_rank + root) % comm_size)
+#define LOGIC_SOURCE(logic_rank) (~(1 << (int)log2(logic_rank)) & (logic_rank))
 
 void
 my_Bcast_rb(
     void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm)
 {
+    void *rbuffer = &((long *)buffer)[count / 2];
+    const char *nodeType = "root";
     int rankFisico, nNodos;
+
     MPI_Comm_rank(comm, &rankFisico);
     MPI_Comm_size(comm, &nNodos);
 
     const int rankLogico = LOGIC_RANK(rankFisico, root, nNodos);
 
-    const int end = ceil(log2(nNodos));
-
-    const char *name = "root";
-
+    // Se não for root, espera receber sua metade do buffer
     if (rankFisico != root) {
-        name = "node";
-        MPI_Recv(buffer, count, datatype, MPI_ANY_SOURCE, 0, comm,
-                 MPI_STATUS_IGNORE);
+        const int src = PHYSIC_RANK(LOGIC_SOURCE(rankLogico), root, nNodos);
+        if (rankLogico % 2 == 0)
+            MPI_Recv(buffer, count / 2, datatype, src, 0, comm,
+                     MPI_STATUS_IGNORE);
+        else
+            MPI_Recv(rbuffer, count / 2 + count % 2, datatype, src, 0, comm,
+                     MPI_STATUS_IGNORE);
+
+        nodeType = "node";
     }
 
-    for (int fase = 0; fase < end; fase++) {
-        int np = pow(2, fase);
+    // Realiza envios de sua metade do buffer
+    for (int fase = 0, end = ceil((double)log2(nNodos)); fase < end; fase++) {
+        const int np = pow(2, fase);
 
-        const int destLogico = rankLogico + pow(2, fase);
-        const int destFisico = PHYSIC_RANK(destLogico, root, nNodos);
+        if (rankLogico >= np || (rankLogico + np) >= nNodos) continue;
 
-        if (rankLogico < np && (rankLogico + np) < nNodos) {
-            // fprintf(stderr, "(%s) rank: %d\tdest: %d\tfase: %d\tnNodos:
-            // %d\n", name, rankFisico, destFisico, fase+1, nNodos);
-            MPI_Send(buffer, count, datatype, destFisico, 0, comm);
-        }
+        const int destLogico = rankLogico + pow(2, fase),
+                  destFisico = PHYSIC_RANK(destLogico, root, nNodos);
+#if DEBUG
+        fprintf(stderr,
+                "(%s) rank: %d\tdest: %d\tfase: %d\tnNodos:"
+                "%d\n",
+                nodeType, rankFisico, destFisico, fase + 1, nNodos);
+#endif
+        if (destLogico % 2 == 0)
+            MPI_Send(buffer, count / 2, datatype, destFisico, 0, comm);
+        else
+            MPI_Send(rbuffer, count / 2 + count % 2, datatype, destFisico, 0,
+                     comm);
+    }
 
-        // if (dest >= nNodos) {
-        // 	fprintf(stderr, "Não envia (dest %d)\n", dest);
-        // 	break;
-        // }
+    // Completa outra metade do buffer a partir do nodo vizinho que contém a
+    //      outra metade
+    if (rankLogico % 2 == 0) {
+        const int destLogico = (rankLogico == 0) ? nNodos - 1 : rankLogico - 1,
+                  destFisico = PHYSIC_RANK(destLogico, root, nNodos);
+
+        MPI_Send(buffer, count / 2, datatype, destFisico, 0, comm);
+        MPI_Recv(rbuffer, count / 2 + count % 2, datatype, destFisico, 0, comm,
+                 MPI_STATUS_IGNORE);
+    }
+    else if (rankFisico != root && nNodos % 2 == 0) {
+        const int destLogico = (rankLogico + 1) % nNodos,
+                  destFisico = PHYSIC_RANK(destLogico, root, nNodos);
+
+        MPI_Recv(buffer, count / 2, datatype, destFisico, 0, comm,
+                 MPI_STATUS_IGNORE);
+        MPI_Send(rbuffer, count / 2 + count % 2, datatype, destFisico, 0,
+                 comm);
     }
 }
 
