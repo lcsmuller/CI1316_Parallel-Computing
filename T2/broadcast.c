@@ -40,6 +40,12 @@ chronometer_t myBroadcastChrono;
 //#define DEBUG 1
 #define DEBUG 0
 
+#if DEBUG == 1
+#define DEBUG_PRINT(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define DEBUG_PRINT(...)
+#endif
+
 const int SEED = 100;
 
 // MACROS para AJUDAR!
@@ -83,12 +89,9 @@ my_Bcast_rb(
 
         const int destLogico = rankLogico + pow(2, fase),
                   destFisico = PHYSIC_RANK(destLogico, root, nNodos);
-#if DEBUG
-        fprintf(stderr,
-                "(%s) rank: %d\tdest: %d\tfase: %d\tnNodos:"
-                "%d\n",
-                nodeType, rankFisico, destFisico, fase + 1, nNodos);
-#endif
+        DEBUG_PRINT("(%s) rank: %d\tdest: %d\tfase: %d\tnNodos:"
+                    "%d\n",
+                    nodeType, rankFisico, destFisico, fase + 1, nNodos);
         if (destLogico % 2 == 0)
             MPI_Send(buffer, count / 2, datatype, destFisico, 0, comm);
         else
@@ -97,23 +100,47 @@ my_Bcast_rb(
     }
 
     // Completa outra metade do buffer a partir do nodo vizinho que contém a
-    //      outra metade
-    if (rankLogico % 2 == 0) {
-        const int destLogico = (rankLogico == 0) ? nNodos - 1 : rankLogico - 1,
+    // outra metade
+    const int ultimoNodoPar = nNodos - 1, ultimoNodoImpar = nNodos - 2;
+
+    if (rankLogico % 2 == 0 && rankLogico != ultimoNodoPar) {
+        const int destLogico = rankLogico + 1,
                   destFisico = PHYSIC_RANK(destLogico, root, nNodos);
 
+        DEBUG_PRINT("Enviando de %d para %d\n", rankFisico, destFisico);
         MPI_Send(buffer, count / 2, datatype, destFisico, 0, comm);
+
+        DEBUG_PRINT("Recebendo de %d para %d\n", rankFisico, destFisico);
         MPI_Recv(rbuffer, count / 2 + count % 2, datatype, destFisico, 0, comm,
                  MPI_STATUS_IGNORE);
     }
-    else if (rankFisico != root && nNodos % 2 == 0) {
-        const int destLogico = (rankLogico + 1) % nNodos,
+    else if (rankLogico % 2 == 1) {
+        const int destLogico = rankLogico - 1,
                   destFisico = PHYSIC_RANK(destLogico, root, nNodos);
 
+        DEBUG_PRINT("Recebendo de %d para %d\n", rankFisico, destFisico);
         MPI_Recv(buffer, count / 2, datatype, destFisico, 0, comm,
                  MPI_STATUS_IGNORE);
+
+        DEBUG_PRINT("Enviando de %d para %d\n", rankFisico, destFisico);
         MPI_Send(rbuffer, count / 2 + count % 2, datatype, destFisico, 0,
                  comm);
+
+        if (rankLogico == ultimoNodoImpar) {
+            const int destLogico = rankLogico + 1,
+                      destFisico = PHYSIC_RANK(destLogico, root, nNodos);
+
+            DEBUG_PRINT("Enviando de %d para %d\n", rankFisico, destFisico);
+            MPI_Send(rbuffer, count / 2 + count % 2, datatype, destFisico, 0,
+                     comm);
+        }
+    }
+    else {
+        const int src = PHYSIC_RANK(rankLogico - 1, root, nNodos);
+
+        DEBUG_PRINT("Recebendo de %d para %d\n", rankFisico, destFisico);
+        MPI_Recv(rbuffer, count / 2 + count % 2, datatype, src, 0, comm,
+                 MPI_STATUS_IGNORE);
     }
 }
 
