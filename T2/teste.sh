@@ -1,3 +1,5 @@
 #!/bin/bash
 
-mpirun -np $1 broadcast 1 4000 -r
+NNODOS=$1
+
+mpirun -np $NNODOS broadcast 1 4000 $NNODOS -r $2

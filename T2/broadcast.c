@@ -51,14 +51,17 @@ const int SEED = 100;
 
 
 void my_Bcast_rb(void* buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm) {
-    int rank, nNodos;
-    MPI_Comm_rank(comm, &rank);
+    int rankFisico, nNodos;
+    MPI_Comm_rank(comm, &rankFisico);
     MPI_Comm_size(comm, &nNodos);
 
+	const int rankLogico = LOGIC_RANK(rankFisico, root, nNodos);
+
     const int end = ceil(log2(nNodos));
+
 	const char *name = "root";
 
-    if (rank != root) {
+    if (rankFisico != root) {
 		name = "node";
         MPI_Recv(buffer, count, datatype, MPI_ANY_SOURCE, 0, comm, MPI_STATUS_IGNORE);
     }
@@ -66,11 +69,12 @@ void my_Bcast_rb(void* buffer, int count, MPI_Datatype datatype, int root, MPI_C
 	for (int fase = 0; fase < end; fase++){
 		int np = pow(2, fase); 
 
-		const int dest = rank + pow(2, fase);
+		const int destLogico = rankLogico + pow(2, fase);
+		const int destFisico = PHYSIC_RANK(destLogico, root, nNodos);
 		
-		if ( rank < np && (rank + np) < nNodos ){
-			fprintf(stderr, "(%s) rank: %d\tdest: %d\tfase: %d\tnNodos: %d\n", name, rank, dest, fase+1, nNodos);
-			MPI_Send(buffer, count, datatype, dest, 0, comm);
+		if ( rankLogico < np && (rankLogico + np) < nNodos ){
+			// fprintf(stderr, "(%s) rank: %d\tdest: %d\tfase: %d\tnNodos: %d\n", name, rankFisico, destFisico, fase+1, nNodos);
+			MPI_Send(buffer, count, datatype, destFisico, 0, comm);
 		}
 		
 		// if (dest >= nNodos) {
