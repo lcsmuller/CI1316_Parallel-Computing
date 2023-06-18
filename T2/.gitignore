@@ -2,6 +2,7 @@
 *
 # But these
 !.gitignore
+!*.md
 !*.pdf
 !*.c
 !Makefile
