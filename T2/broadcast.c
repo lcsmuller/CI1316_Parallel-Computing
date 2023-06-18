@@ -66,6 +66,8 @@ my_Bcast_rb(
     MPI_Comm_rank(comm, &rankFisico);
     MPI_Comm_size(comm, &nNodos);
 
+    if (nNodos == 1) return;
+
     const int rankLogico = LOGIC_RANK(rankFisico, root, nNodos);
 
     // Se não for root, espera receber sua metade do buffer
