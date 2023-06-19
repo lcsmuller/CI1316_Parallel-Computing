@@ -1,0 +1,10 @@
+# Ignore all
+*
+# But these
+!.gitignore
+!*.md
+!*.pdf
+!*.png
+!*.c
+!Makefile
+!*.sh
