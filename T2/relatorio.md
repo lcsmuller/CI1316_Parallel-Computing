@@ -86,6 +86,10 @@ O objetivo do experimento foi avaliar o desempenho do algoritmo de broadcast imp
 |                    | 0.000109   | 0.283993   | 1.162111   | 1.220941   | 1.392104   | 1.481118   | 1.607448   | 1.586992   |
 |                    | 0.000125   | 0.284022   | 1.109053   | 1.370530   | 1.387890   | 1.512626   | 1.591672   | 1.605078   |
 
+#### `my_Bcast_rb()` x `MPI_Bcast()`
+
+<img src="tempo_medio.png" width="65%" height="65%">
+
 ### Vazão média obtida
 
 #### `myBcast_rb()`
@@ -117,6 +121,12 @@ O objetivo do experimento foi avaliar o desempenho do algoritmo de broadcast imp
 |                    | 0.000000   | 101.862373 | 59.562990  | 78.258629  | 92.414641  | 110.327200 | 124.183422 | 143.227173 |
 |                    | 0.000000   | 115.383169 | 56.393946  | 80.514930  | 94.153863  | 110.619154 | 122.310661 | 144.535042 |
 |                    | 0.000000   | 115.371520 | 59.091833  | 71.727018  | 94.439792  | 108.314968 | 123.522967 | 142.906414 |
+
+#### `my_Bcast_rb()` x `MPI_Bcast()`
+
+<img src="vazao_media.png" width="65%" height="65%">
+
+---
 
 Após a comparação dos gráficos da nossa implementação `my_Bcast_rb()` com a implementação original `MPI_Bcast()`, é possível perceber algumas diferenças.
 
