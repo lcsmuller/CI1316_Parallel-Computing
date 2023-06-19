@@ -4,6 +4,7 @@
 !.gitignore
 !*.md
 !*.pdf
+!*.png
 !*.c
 !Makefile
 !*.sh
