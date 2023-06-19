@@ -1,7 +1,7 @@
 CC = mpic++
 
 SRC  = chrono.c
-MAIN = broadcast
+MAIN = myBroadcast
 
 CFLAGS = -I./
 LDLIBS = -lmpi
